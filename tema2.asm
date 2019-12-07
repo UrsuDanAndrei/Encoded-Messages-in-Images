@@ -17,8 +17,10 @@ extern get_image_width
 extern get_image_height
 
 section .data
-	use_str db "Use with ./tema2 <task_num> [opt_arg1] [opt_arg2]", 10, 0
-    format db "%s\n", 0
+    use_str db "Use with ./tema2 <task_num> [opt_arg1] [opt_arg2]", 10, 0
+    wanted_str db "revient", 0 
+    format db "%s\0", 0
+
 
 section .bss
     task:       resd 1
@@ -55,19 +57,17 @@ bruteforce_singlebyte_xor:
     push ebp
     mov ebp, esp
     
-    ; for correct iteration
-    sub DWORD[img_width], 6
-    
     xor ecx, ecx
     
-other_key_value:
+key_value_iterate:
     ; saving the key value on the stack
     push ecx
     mov edx, ecx
     
-    PRINT_STRING "cheia: "
-    PRINT_UDEC 4, edx
-    NEWLINE
+    ;PRINT_STRING "cheia: "
+    ;PRINT_UDEC 4, edx
+    ;NEWLINE
+    ;NEWLINE
 
     xor ecx, ecx
     
@@ -75,111 +75,70 @@ row_iterate:
     ; saving the row number on the stack
     push ecx
 
-    ; ebx is the offset for the first element in the current row
-    add ebx, ecx
-    NEWLINE
-    PRINT_UDEC 4, ecx
-    PRINT_STRING " coloana: "
+    ; ebx is the offset / 4 for the first element in the current row
+    push edx
+    mov eax, ecx
+    mul DWORD[img_width]
+    mov ebx, eax
+    pop edx
+    
+    ;NEWLINE
+    ;PRINT_UDEC 4, ecx
+    ;PRINT_STRING " coloana: "
     xor ecx, ecx
     
 column_iterate:
-    ; saving the column number on the stack
+    ; saving the column number and the offset on the stack
     push ebx
     push ecx
-    PRINT_UDEC 4, ecx
-    PRINT_STRING " "
-    ; checking for letter 'r'
+    
+    ;PRINT_UDEC 4, ecx
+    ;PRINT_STRING " "
+    
+    xor ecx, ecx
+    ;jmp end_column_iterate
+    
+   ;     mov eax, [ebp + 8]
+   ; mov eax, [eax + 4 * ebx]
+    
+    ;xor eax, edx
+    
+    ;PRINT_UDEC 4, eax
+    ;PRINT_STRING " "
+    
+wanted_str_iterate:
+    ; checking if it is the end of a column
+    cmp ecx, [img_width]
+    je end_column_iterate
+    
     ; the pixel value is moved in eax
     mov eax, [ebp + 8]
     mov eax, [eax + 4 * ebx]
     
+    
     ; xor with the key    
     xor eax, edx
 
-    cmp eax, 'r'
+    cmp al, BYTE[wanted_str + ecx]
     jne end_column_iterate
+    ;NEWLINE    
+    ;NEWLINE
+    ;PRINT_CHAR [wanted_str + ecx]
+    ;NEWLINE
+    ;NEWLINE
     
-    ; checking for letter 'e'
     inc ebx
     inc ecx
-
-    mov eax, [ebp + 8]
-    mov eax, [eax + 4 * ebx]
-
-    xor eax, edx
-
-    cmp eax, 'e'
-    jne end_column_iterate
-
-    ; checking for letter 'v'
-    inc ebx
-    inc ecx
-
-    mov eax, [ebp + 8]
-    mov eax, [eax + 4 * ebx]
-
-    xor eax, edx
-
-    cmp eax, 'v'
-    jne end_column_iterate
-
-    ; checking for letter 'i'
-    inc ebx
-    inc ecx
-
-    mov eax, [ebp + 8]
-    mov eax, [eax + 4 * ebx]
-
-    xor eax, edx
-
-    cmp eax, 'i'
-    jne end_column_iterate
-
-    ; checking for letter 'e'
-    inc ebx
-    inc ecx
-
-    mov eax, [ebp + 8]
-    mov eax, [eax + 4 * ebx]
-
-    xor eax, edx
-
-    cmp eax, 'e'
-    jne end_column_iterate
-
-    ; checking for letter 'n'
-    inc ebx
-    inc ecx
-
-    mov eax, [ebp + 8]
-    mov eax, [eax + 4 * ebx]
-
-    xor eax, edx
-
-    cmp eax, 'n'
-    jne end_column_iterate
-
-    ; checking for letter 't'
-    inc ebx
-    inc ecx
-
-    mov eax, [ebp + 8]
-    mov eax, [eax + 4 * ebx]
-
-    xor eax, edx
-
-    cmp eax, 't'
-    jne end_column_iterate
     
-    PRINT_STRING "ggggggggggggggggggggggggggggggggggggggggggggggggggg"
+    cmp ecx, 7
+    jne wanted_str_iterate
     
     ; found the word here, clearing the stack off unnecessary information
     add esp, 8
-    
     jmp found
 
 end_column_iterate:
-    ; the column number is taken off the stack
+    ; the column number and the offset are taken off the stack
     pop ecx
     pop ebx
 
@@ -201,9 +160,10 @@ end_column_iterate:
     ; taking the key value off the stack
     pop ecx
     inc ecx
-
+    
+    ; compare with 256
     cmp ecx, 0x00000100
-    jne other_key_value
+    jne key_value_iterate
     
     
 found:
@@ -211,22 +171,10 @@ found:
     pop ecx
     pop edx
 
-    mov eax, [ebp + 8]
-    add eax, ecx
-    
-    PRINT_STRING "weeeee"
-    push eax
-    push format
-    call printf
-    add esp, 8
-
     ; storing them in eax
     mov eax, ecx
     shl eax, 8
     mov al, dl
-    
-    ; restoring img_width to its initial value
-    add DWORD[img_width], 6
     
     leave
     ret
@@ -288,10 +236,55 @@ not_zero_param:
     je solve_task6
     jmp done
 
-solve_task1:    
+solve_task1:
     push DWORD[img]
     call bruteforce_singlebyte_xor
     add esp, 4
+    
+    ; the first byte in eax is the key value
+    xor edx, edx
+    mov dl, al
+    
+    ; the rest is the row number, saving it on the stack
+    shr eax, 8
+    push eax
+    
+    ; calculating the offset / 4 and storing it in ecx
+    push edx
+    mul DWORD[img_width]
+    mov ecx, eax
+    pop edx
+        
+    ; moving in eax the matrix address
+    mov eax, DWORD[img]
+
+print_message:
+    mov ebx, DWORD[eax + 4 * ecx]
+    
+    ; xor with the key
+    xor ebx, edx
+    
+    cmp ebx, 0
+    je print_key_and_row
+    
+    cmp ebx, 10
+    je print_key_and_row
+    
+    PRINT_CHAR ebx
+    
+    inc ecx
+    
+    jmp print_message
+    
+print_key_and_row:
+    NEWLINE
+    PRINT_UDEC 4, edx
+    
+    pop ecx
+    NEWLINE
+    PRINT_UDEC 4, ecx
+    NEWLINE
+       
     jmp done
 
 solve_task2:
@@ -315,7 +308,7 @@ done:
     push DWORD[img]
     call free_image
     add esp, 4
-
+    
     ; Epilogue
     ; Do not modify!
     xor eax, eax
