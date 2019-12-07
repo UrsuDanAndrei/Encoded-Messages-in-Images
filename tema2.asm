@@ -18,15 +18,18 @@ extern get_image_height
 
 section .data
     use_str db "Use with ./tema2 <task_num> [opt_arg1] [opt_arg2]", 10, 0
-    wanted_str db "revient", 0 
-    format db "%s\0", 0
-
 
 section .bss
     task:       resd 1
     img:        resd 1
     img_width:  resd 1
     img_height: resd 1
+
+section .rodata
+    wanted_str db "revient", 0
+    response db "C'est un proverbe francais.", 0
+    wanted_str_size dd 7
+    response_size dd 28
 
 section .text
 
@@ -63,11 +66,6 @@ key_value_iterate:
     ; saving the key value on the stack
     push ecx
     mov edx, ecx
-    
-    ;PRINT_STRING "cheia: "
-    ;PRINT_UDEC 4, edx
-    ;NEWLINE
-    ;NEWLINE
 
     xor ecx, ecx
     
@@ -76,15 +74,12 @@ row_iterate:
     push ecx
 
     ; ebx is the offset / 4 for the first element in the current row
-    push edx
     mov eax, ecx
+    push edx
     mul DWORD[img_width]
-    mov ebx, eax
     pop edx
+    mov ebx, eax
     
-    ;NEWLINE
-    ;PRINT_UDEC 4, ecx
-    ;PRINT_STRING " coloana: "
     xor ecx, ecx
     
 column_iterate:
@@ -92,19 +87,7 @@ column_iterate:
     push ebx
     push ecx
     
-    ;PRINT_UDEC 4, ecx
-    ;PRINT_STRING " "
-    
     xor ecx, ecx
-    ;jmp end_column_iterate
-    
-   ;     mov eax, [ebp + 8]
-   ; mov eax, [eax + 4 * ebx]
-    
-    ;xor eax, edx
-    
-    ;PRINT_UDEC 4, eax
-    ;PRINT_STRING " "
     
 wanted_str_iterate:
     ; checking if it is the end of a column
@@ -115,22 +98,16 @@ wanted_str_iterate:
     mov eax, [ebp + 8]
     mov eax, [eax + 4 * ebx]
     
-    
     ; xor with the key    
     xor eax, edx
 
     cmp al, BYTE[wanted_str + ecx]
     jne end_column_iterate
-    ;NEWLINE    
-    ;NEWLINE
-    ;PRINT_CHAR [wanted_str + ecx]
-    ;NEWLINE
-    ;NEWLINE
     
     inc ebx
     inc ecx
     
-    cmp ecx, 7
+    cmp ecx, DWORD[wanted_str_size]
     jne wanted_str_iterate
     
     ; found the word here, clearing the stack off unnecessary information
@@ -145,15 +122,15 @@ end_column_iterate:
     inc ebx
     inc ecx
 
-    ; if it is not the last possible position for revient continue iterating
+    ; continue only if this was not the last column
     cmp ecx, DWORD[img_width]
     jne column_iterate
     
-    ; the current row number is taken of stack
+    ; the current row number is taken off the stack
     pop ecx
     inc ecx
     
-    ; continue only if this is not the last row
+    ; continue only if this was not the last row
     cmp ecx, DWORD[img_height]
     jne row_iterate
 
@@ -161,7 +138,7 @@ end_column_iterate:
     pop ecx
     inc ecx
     
-    ; compare with 256
+    ; max key value is 255
     cmp ecx, 0x00000100
     jne key_value_iterate
     
@@ -175,6 +152,29 @@ found:
     mov eax, ecx
     shl eax, 8
     mov al, dl
+    
+    leave
+    ret
+
+; receives the matrix address and a key value
+; xors all the elements in the matrix with the key
+xor_with_key:
+    push ebp
+    mov ebp, esp
+    
+    ; ecx = img_height * img_width
+    mov eax, DWORD[img_height]
+    mul DWORD[img_width]
+    mov ecx, eax
+    
+    ; getting the matrix address and the key
+    mov eax, [ebp + 8]
+    mov edx, [ebp + 12]
+    
+    ; iterating through matrix like an array
+matrix_iterating:
+    xor DWORD[eax + 4 * (ecx - 1)], edx
+    loop matrix_iterating
     
     leave
     ret
@@ -237,6 +237,7 @@ not_zero_param:
     jmp done
 
 solve_task1:
+    ; finding the key and the row number
     push DWORD[img]
     call bruteforce_singlebyte_xor
     add esp, 4
@@ -280,6 +281,7 @@ print_key_and_row:
     NEWLINE
     PRINT_UDEC 4, edx
     
+    ; taking the row number off the stack
     pop ecx
     NEWLINE
     PRINT_UDEC 4, ecx
@@ -288,8 +290,72 @@ print_key_and_row:
     jmp done
 
 solve_task2:
-    ; TODO Task2
+    ; finding the key and the row number
+    push DWORD[img]
+    call bruteforce_singlebyte_xor
+    add esp, 4
+    
+    ; the first byte in eax is the key value, saving it on the stack
+    xor edx, edx
+    mov dl, al
+    push edx
+    
+    ; the rest is the row number, saving it on the stack
+    shr eax, 8
+    push eax
+    
+    ; decrypting matrix
+    push edx
+    push DWORD[img]
+    call xor_with_key
+    add esp, 8
+    
+    ; ebx = the offset / 4 where the response should be inserted
+    pop eax
+    inc eax
+    mul DWORD[img_width]
+    mov ebx, eax
+    
+    ; adding the response
+    mov eax, DWORD[img]
+    xor ecx, ecx
+    xor edx, edx
+    
+insert_response:
+    mov dl, BYTE[response + ecx]
+    mov DWORD[eax + 4 * ebx], edx
+    
+    inc ecx
+    inc ebx
+    
+    cmp ecx, DWORD[response_size]
+    jne insert_response
+
+    ; setting the new key value
+    pop eax
+    mov ebx, 2
+    mul ebx
+    add eax, 3
+    xor edx, edx
+    mov ebx, 5
+    div ebx
+    sub eax, 4
+    
+    ; crypting matrix
+    push eax
+    push DWORD[img]
+    call xor_with_key
+    add esp, 8
+    
+    ; printing image
+    push DWORD[img_height]
+    push DWORD[img_width]
+    push DWORD[img]
+    call print_image
+    add esp, 12
+    
     jmp done
+    
 solve_task3:
     ; TODO Task3
     jmp done
