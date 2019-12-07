@@ -18,6 +18,7 @@ extern get_image_height
 
 section .data
 	use_str db "Use with ./tema2 <task_num> [opt_arg1] [opt_arg2]", 10, 0
+    format db "%s\n", 0
 
 section .bss
     task:       resd 1
@@ -53,9 +54,6 @@ section .text
 bruteforce_singlebyte_xor:
     push ebp
     mov ebp, esp
-
-    ; the address of the matrix is stored in eax
-    mov eax, [ebp + 8]
     
     ; for correct iteration
     sub DWORD[img_width], 6
@@ -66,27 +64,34 @@ other_key_value:
     ; saving the key value on the stack
     push ecx
     mov edx, ecx
+    
+    PRINT_STRING "cheia: "
+    PRINT_UDEC 4, edx
+    NEWLINE
 
     xor ecx, ecx
-
+    
 row_iterate:
     ; saving the row number on the stack
     push ecx
 
     ; ebx is the offset for the first element in the current row
     add ebx, ecx
-
+    NEWLINE
+    PRINT_UDEC 4, ecx
+    PRINT_STRING " coloana: "
     xor ecx, ecx
     
 column_iterate:
     ; saving the column number on the stack
     push ebx
     push ecx
-    
+    PRINT_UDEC 4, ecx
+    PRINT_STRING " "
     ; checking for letter 'r'
     ; the pixel value is moved in eax
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
     
     ; xor with the key    
     xor eax, edx
@@ -99,7 +104,7 @@ column_iterate:
     inc ecx
 
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
 
     xor eax, edx
 
@@ -111,7 +116,7 @@ column_iterate:
     inc ecx
 
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
 
     xor eax, edx
 
@@ -123,7 +128,7 @@ column_iterate:
     inc ecx
 
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
 
     xor eax, edx
 
@@ -135,7 +140,7 @@ column_iterate:
     inc ecx
 
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
 
     xor eax, edx
 
@@ -147,7 +152,7 @@ column_iterate:
     inc ecx
 
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
 
     xor eax, edx
 
@@ -159,14 +164,25 @@ column_iterate:
     inc ecx
 
     mov eax, [ebp + 8]
-    mov eax, [eax + ebx]
+    mov eax, [eax + 4 * ebx]
 
     xor eax, edx
 
     cmp eax, 't'
     jne end_column_iterate
+    
+    PRINT_STRING "ggggggggggggggggggggggggggggggggggggggggggggggggggg"
+    
+    ; found the word here, clearing the stack off unnecessary information
+    add esp, 8
+    
+    jmp found
 
 end_column_iterate:
+    ; the column number is taken off the stack
+    pop ecx
+    pop ebx
+
     inc ebx
     inc ecx
 
@@ -174,53 +190,41 @@ end_column_iterate:
     cmp ecx, DWORD[img_width]
     jne column_iterate
     
-    
     ; the current row number is taken of stack
     pop ecx
     inc ecx
     
     ; continue only if this is not the last row
     cmp ecx, DWORD[img_height]
-    jne row_iterating
+    jne row_iterate
 
     ; taking the key value off the stack
     pop ecx
     inc ecx
 
-    ; the input certainly contains the word so this jump is unconditioned
-    jmp other_key_value
+    cmp ecx, 0x00000100
+    jne other_key_value
     
     
 found:
-    ; finding on what line "revient" is and storing it in eax
-    xor edx, edx
-    mov eax, ecx
-    mov ebx, [img_width]
-    div ebx
+    ; taking the row number and the key value off the stack
+    pop ecx
+    pop edx
 
-    ; adding the last element of the line on stack, setting it to 0
-    mov ebx, [ebp + 8]
-    mov ecx, [img_width]
-    add ecx, eax
+    mov eax, [ebp + 8]
+    add eax, ecx
     
-    xor edx, edx
-    mov dl, [ebx + ecx - 1] 
-    push edx
-
-    mov BYTE[ebx + ecx - 1], 0
-       
-    push "%s\n"
-    push ebx
+    PRINT_STRING "weeeee"
+    push eax
+    push format
     call printf
     add esp, 8
+
+    ; storing them in eax
+    mov eax, ecx
+    shl eax, 8
+    mov al, dl
     
-    ; setting the last element of the line back to its initial value
-    pop edx
-    mov BYTE[ebx + ecx - 1], dl
-
-    ; taking off the stack the elements added there before
-    add esp, 12
-
     ; restoring img_width to its initial value
     add DWORD[img_width], 6
     
