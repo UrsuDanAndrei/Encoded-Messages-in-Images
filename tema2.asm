@@ -28,33 +28,14 @@ section .bss
 section .rodata
     wanted_str db "revient", 0
     response db "C'est un proverbe francais.", 0
+    
     wanted_str_size dd 7
     response_size dd 28
-
+    
+    letter2morse db "A{.-} B{-...} C{-.-.} D{-..} E{.} F{..-.} G{--.} H{....} I{..} J{.---} K{-.-} L{.-..} M{--} N{-.} O{---} P{.--.} Q{--.-} R{.-.} S{...} T{-} U{..-} V{...-} W{.--} X{-..-} Y{-.--} Z{--..}", 0                                                                                                 
+    letter2morse_offset_begin dd 2, 8, 16, 24, 31, 36, 44, 51, 59, 65, 73, 80, 88, 94, 100, 107, 115, 123, 130, 137, 142, 149, 157, 164, 172, 180
+    letter2morse_offset_end dd 4, 12, 20, 27, 32, 40, 47, 55, 61, 69, 76, 84, 90, 96, 103, 111, 119, 126, 133, 138, 145, 153, 160, 168, 176, 184
 section .text
-
-; receives 2 letters, returns 1 if they are equal, 0 otherwise
-;check_letter:
-    ;push ebp
-    ;mov ebp, esp
-    
-    ; saving the value of ebx on the stack
-    ;push ebx
-
-   ; mov ebx, DWORD[ebp + 8]
-    ;xor eax, eax
-
-   ; cmp ebx, DWORD[ebp + 12]
-  ;  jne end_check_letter
-    
- ;   mov eax, 1
-    
-;end_check_letter:
-    ;pop ebx
-
-    ;leave
-    ;ret
-    
 
 bruteforce_singlebyte_xor:
     push ebp
@@ -178,6 +159,67 @@ matrix_iterating:
     
     leave
     ret
+    
+morse_encrypt: ;(int* img, char* msg, int byte_id)
+    push ebp
+    mov ebp, esp
+    
+    xor ecx, ecx
+    
+message_iterate:
+    mov eax, [ebp + 12]
+    
+    ; ebx = beginning offset of the current letter for letter2morse
+    xor ebx, ebx
+    mov bl, BYTE[eax + ecx]
+    sub bl, 'A'
+    mov ebx, DWORD[letter2morse_offset_begin + 4 * ebx]
+    
+    ; saving the end offset of the current letter for letter2morse on the stack
+    push  DWORD[letter2morse_offset_end + 4 * edx]
+    
+    ; saving the index of the message on the stack
+    push ecx
+    xor ecx, ecx
+    
+    mov eax, [ebp + 8]
+    
+insert_encrypted_letter:
+    xor edx, edx
+    mov dl, BYTE[letter2morse + ebx]
+    
+    ; ecx = the offset / 4 in matrix where the letter should be inserted
+    push ecx
+    push ebx
+    
+    mov ebx, DWORD[ebp + 16]
+    add ecx, ebx
+    
+    pop ebx
+    
+    mov DWORD[eax + 4 * ecx], edx
+    
+    ; restoring ecx
+    pop ecx
+    inc ecx
+    inc ebx
+    
+    ; comparing with the end offset of the current letter
+    cmp ebx, DWORD[ebp - 4]
+    jne insert_encrypted_letter
+    
+    ; taking the message index off the stack
+    pop ecx
+    inc ecx
+    
+    ; if the index doesn't point at '\0' continue
+    cmp DWORD[eax + ecx], 0
+    jne message_iterate
+     
+    leave
+    ret
+    
+    
 
 global main
 main:
@@ -341,7 +383,7 @@ insert_response:
     div ebx
     sub eax, 4
     
-    ; crypting matrix
+    ; encrypting matrix
     push eax
     push DWORD[img]
     call xor_with_key
@@ -357,8 +399,31 @@ insert_response:
     jmp done
     
 solve_task3:
-    ; TODO Task3
+    ; getting data from arguments
+    mov edx, [ebp + 12]
+    
+    ; eax = offset / 4
+    push DWORD[edx + 16]
+    call atoi
+    add esp, 4
+    
+    
+    ; [edx + 12] = address of the message
+    push eax
+    push DWORD[edx + 12]
+    push DWORD[img]
+    call morse_encrypt
+    add esp, 12
+    
+    ; printing image
+    push DWORD[img_height]
+    push DWORD[img_width]
+    push DWORD[img]
+    call print_image
+    add esp, 12
+    
     jmp done
+    
 solve_task4:
     ; TODO Task4
     jmp done
