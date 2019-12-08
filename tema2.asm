@@ -40,6 +40,7 @@ section .rodata
     mask_check dd 0x00000080
     mask_set dd 0x00000001
     mask_reset dd 0xfffffffe
+    mask_get_last_bit dd 0x00000001
     
 section .text
 
@@ -190,7 +191,7 @@ comma_case:
     
 begin_end_offset_initialise:
     ; saving the end offset of the current letter for letter2morse on the stack
-    push  DWORD[letter2morse_offset_end + 4 * ebx]
+    push DWORD[letter2morse_offset_end + 4 * ebx]
     
     ; ebx = beginning offset of the current letter for letter2morse
     mov ebx, DWORD[letter2morse_offset_begin + 4 * ebx]
@@ -250,10 +251,10 @@ insert_encrypted_letter:
     leave
     ret
     
-lsb_encode: ;void lsb_encode(int* img, char* msg, int byte_id);
+lsb_encode:
     push  ebp
     mov ebp, esp
-    
+        
     xor ecx, ecx
     
 insert_letters:
@@ -265,18 +266,13 @@ insert_letters:
     push ecx
     xor ecx, ecx
     
-    ;NEWLINE
-   ; PRINT_STRING "letter: "
-    ;PRINT_CHAR edx
-   ; NEWLINE
-    
 insert_bits:
     ; saving bits counter
     push ecx
 
     ; ecx = the offset / 4 in matrix where the current bit should be inserted
     mov ecx, DWORD[ebp + 16]
-    
+
     ; the offset / 4 in matrix where the next bit should be inserted
     inc DWORD[ebp + 16]
     
@@ -287,7 +283,6 @@ insert_bits:
     cmp edx, 0
     je reset
     
-    ;PRINT_STRING "1"
     ; ebx = the set mask
     mov ebx, DWORD[mask_set]
     
@@ -298,7 +293,6 @@ insert_bits:
     jmp end_insert_bits
     
 reset:
-    ;PRINT_STRING "0"
     ; ebx = the reset mask
     mov ebx, DWORD[mask_reset]
     
@@ -346,7 +340,59 @@ insert_0:
     
     leave
     ret
+    
+lsb_decode:
+    push ebp
+    mov ebp, esp
+    
+    mov eax, [ebp + 8]
+    
+form_message:
+    ; the letter will be stored in edx
+    xor edx, edx
+    xor ecx, ecx
+    
+form_letter:
+    ; saving bit count
+    push ecx
+    
+    ; ecx = offset / 4 for current pixel
+    mov ecx, DWORD[ebp + 12]
+    
+    ; offset / 4 for next pixel
+    inc DWORD[ebp + 12]
 
+    ; ebx = last bit of the current pixel
+    mov ebx, DWORD[eax + 4 * ecx]
+    and ebx, DWORD[mask_get_last_bit]
+    
+    ; adding ebx to current letter
+    shl edx, 1
+    add edx, ebx
+    
+    pop ecx
+    inc ecx
+    
+    ; checking if the letter is complete
+    cmp ecx, 8
+    jne form_letter
+
+    ; checking for '\0' (end of the message)
+    cmp edx, 0
+    je end_lsb_decode
+    
+    ; printing current letter
+    PRINT_CHAR edx
+    
+    ; moving on next letter of the message
+    jmp form_message
+    
+end_lsb_decode:
+    NEWLINE
+    
+    leave
+    ret
+    
 global main
 main:
     ; Prologue
@@ -559,9 +605,10 @@ solve_task4:
     push DWORD[edx + 16]
     call atoi
     add esp, 4
-        
+    
     mov edx, [ebp + 12]
     dec eax
+    
     ; [edx + 12] = address of the message
     push eax
     push DWORD[edx + 12]
@@ -577,9 +624,23 @@ solve_task4:
     add esp, 12
     
     jmp done
+    
 solve_task5:
-    ; TODO Task5
+    ; getting data from arguments
+    mov edx, [ebp + 12]
+    
+    ; eax = offset / 4 where the encoded message is in matrix
+    push DWORD[edx + 12]
+    call atoi
+    add esp, 4
+    dec eax
+    push eax
+    push DWORD[img]
+    call lsb_decode
+    add esp, 8
+    
     jmp done
+    
 solve_task6:
     ; TODO Task6
     jmp done

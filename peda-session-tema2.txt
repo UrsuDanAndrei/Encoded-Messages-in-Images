@@ -1,2 +1,8 @@
-break solve_task3
+break lsb_encode
+break insert_letters
+break insert_bits
+break reset
+break solve_task4
+
+
 
