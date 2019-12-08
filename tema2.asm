@@ -393,64 +393,102 @@ end_lsb_decode:
     leave
     ret
     
-global main
-main:
-    ; Prologue
-    ; Do not modify!
+blur:
     push ebp
     mov ebp, esp
-
+    
+    ; skipping first and last row
+    mov ecx, 2
+    
+blur_row:
+    ; saving row number
+    push ecx
+     
+    ; ebx = the offset / 4 for the first element of the current row
+    mov eax, ecx
+    dec eax
+    mul DWORD[img_width]
+    mov ebx, eax
+    
     mov eax, [ebp + 8]
-    cmp eax, 1
-    jne not_zero_param
-
-    push use_str
-    call printf
-    add esp, 4
-
-    push -1
-    call exit
-
-not_zero_param:
-    ; We read the image. You can thank us later! :)
-    ; You have it stored at img variable's address.
-    mov eax, [ebp + 12]
-    push DWORD[eax + 4]
-    call read_image
-    add esp, 4
-    mov [img], eax
-
-    ; We saved the image's dimensions in the variables below.
-    call get_image_width
-    mov [img_width], eax
-
-    call get_image_height
-    mov [img_height], eax
-
-    ; Let's get the task number. It will be stored at task variable's address.
-    mov eax, [ebp + 12]
-    push DWORD[eax + 8]
-    call atoi
-    add esp, 4
-    mov [task], eax
-
-    ; There you go! Have fun! :D
-    mov eax, [task]
-    cmp eax, 1
-    je solve_task1
-    cmp eax, 2
-    je solve_task2
-    cmp eax, 3
-    je solve_task3
-    cmp eax, 4
-    je solve_task4
-    cmp eax, 5
-    je solve_task5
-    cmp eax, 6
-    je solve_task6
-    jmp done
-
-solve_task1:
+    
+    ; first and last element of each column are skipped
+    mov ecx, 2
+    add ebx, 2
+        
+blur_column:
+    NEWLINE
+    PRINT_STRING "------"
+    NEWLINE
+    ; saving column number and offset
+    push ebx
+    push ecx
+    
+    ;PRINT_UDEC 4, ecx
+    ;NEWLINE
+    ; current pixel
+    mov edx, DWORD[eax + 4 * (ebx - 1)]
+    PRINT_UDEC 4, ebx
+    NEWLINE
+    ; pixel above
+    sub ebx, DWORD[img_width]
+    PRINT_UDEC 4, ebx
+    NEWLINE
+    add edx, DWORD[eax + 4 * (ebx - 1)]
+    
+    ; pixel below
+    mov ebx, [ebp - 8]
+    add ebx, DWORD[img_width]
+    PRINT_UDEC 4, ebx
+    NEWLINE
+    add edx, DWORD[eax + 4 * (ebx - 1)]
+    
+    ; pixel left
+    mov ebx, [ebp - 8]
+    dec ebx
+    PRINT_UDEC 4, ebx
+    NEWLINE
+    add ebx, DWORD[eax + 4 * (ebx - 1)]
+    
+    ; pixel right
+    mov ebx, [ebp - 8]
+    inc ebx
+    PRINT_UDEC 4, ebx
+    NEWLINE
+    add edx, DWORD[eax + 4 * (ebx - 1)]
+    
+    ; edx = pixel average
+    mov eax, edx
+    xor edx, edx
+    mov ebx, 5
+    div ebx
+    mov edx, eax
+    
+    ; bluring the current pixel
+    pop ecx
+    pop ebx
+    mov eax, DWORD[ebp + 8]
+    mov DWORD[eax + 4 * (ebx - 1)], edx
+    
+    inc ecx
+    inc ebx
+    
+    cmp ecx, DWORD[img_width]
+    jne blur_column
+    
+    pop ecx
+    inc ecx
+    
+    cmp ecx, DWORD[img_height]
+    jne blur_row
+    
+    leave
+    ret
+    
+function_solve_task1:
+    push ebp
+    mov ebp, esp
+    
     ; finding the key and the row number
     push DWORD[img]
     call bruteforce_singlebyte_xor
@@ -497,13 +535,15 @@ print_key_and_row:
     
     ; taking the row number off the stack
     pop ecx
+    
     NEWLINE
     PRINT_UDEC 4, ecx
     NEWLINE
-       
-    jmp done
-
-solve_task2:
+    
+    leave
+    ret
+    
+function_solve_task2:
     ; finding the key and the row number
     push DWORD[img]
     call bruteforce_singlebyte_xor
@@ -568,18 +608,22 @@ insert_response:
     call print_image
     add esp, 12
     
-    jmp done
+    leave
+    ret
     
-solve_task3:
-    ; getting data from arguments
-    mov edx, [ebp + 12]
+function_solve_task3:
+    push ebp
+    mov ebp, esp
+    
+    ; getting data from main arguments
+    mov edx, [ebp + 8]
     
     ; eax = offset / 4 where the encrypted message should be written
     push DWORD[edx + 16]
     call atoi
     add esp, 4
         
-    mov edx, [ebp + 12]
+    mov edx, [ebp + 8]
     
     ; [edx + 12] = address of the message
     push eax
@@ -595,19 +639,23 @@ solve_task3:
     call print_image
     add esp, 12
     
-    jmp done
+    leave
+    ret
+
+function_solve_task4:
+    push ebp
+    mov ebp, esp
     
-solve_task4:
-    ; getting data from arguments
-    mov edx, [ebp + 12]
+    ; getting data from main arguments
+    mov edx, [ebp + 8]
     
     ; eax = offset / 4 where the encoded message should be written
     push DWORD[edx + 16]
     call atoi
     add esp, 4
-    
-    mov edx, [ebp + 12]
     dec eax
+    
+    mov edx, [ebp + 8]
     
     ; [edx + 12] = address of the message
     push eax
@@ -623,26 +671,133 @@ solve_task4:
     call print_image
     add esp, 12
     
-    jmp done
+    leave
+    ret
     
-solve_task5:
-    ; getting data from arguments
-    mov edx, [ebp + 12]
+function_solve_task5:
+    push ebp
+    mov ebp, esp
+    
+    ; getting data from main arguments
+    mov edx, [ebp + 8]
     
     ; eax = offset / 4 where the encoded message is in matrix
     push DWORD[edx + 12]
     call atoi
     add esp, 4
     dec eax
+    
     push eax
     push DWORD[img]
     call lsb_decode
     add esp, 8
     
+    leave
+    ret
+
+function_solve_task6:
+    push ebp
+    mov ebp, esp
+    
+    push DWORD[img]
+    call blur
+    add esp, 4
+    
+    ; printing image
+    push DWORD[img_height]
+    push DWORD[img_width]
+    push DWORD[img]
+    call print_image
+    add esp, 12
+    
+    leave
+    ret
+
+global main
+main:
+    ; Prologue
+    ; Do not modify!
+    push ebp
+    mov ebp, esp
+
+    mov eax, [ebp + 8]
+    cmp eax, 1
+    jne not_zero_param
+
+    push use_str
+    call printf
+    add esp, 4
+
+    push -1
+    call exit
+
+not_zero_param:
+    ; We read the image. You can thank us later! :)
+    ; You have it stored at img variable's address.
+    mov eax, [ebp + 12]
+    push DWORD[eax + 4]
+    call read_image
+    add esp, 4
+    mov [img], eax
+
+    ; We saved the image's dimensions in the variables below.
+    call get_image_width
+    mov [img_width], eax
+
+    call get_image_height
+    mov [img_height], eax
+
+    ; Let's get the task number. It will be stored at task variable's address.
+    mov eax, [ebp + 12]
+    push DWORD[eax + 8]
+    call atoi
+    add esp, 4
+    mov [task], eax
+
+    ; There you go! Have fun! :D
+    mov eax, [task]
+    cmp eax, 1
+    je solve_task1
+    cmp eax, 2
+    je solve_task2
+    cmp eax, 3
+    je solve_task3
+    cmp eax, 4
+    je solve_task4
+    cmp eax, 5
+    je solve_task5
+    cmp eax, 6
+    je solve_task6
+    jmp done
+
+solve_task1:
+    call function_solve_task1
+    jmp done
+
+solve_task2:
+    call function_solve_task2
+    jmp done
+    
+solve_task3:
+    push DWORD[ebp + 12]
+    call function_solve_task3
+    add esp, 4
+    jmp done
+    
+solve_task4:
+    push DWORD[ebp + 12]
+    call function_solve_task4
+    add esp, 4
+    jmp done
+    
+solve_task5:
+    push DWORD[ebp + 12]
+    call function_solve_task5
+    add esp, 4
     jmp done
     
 solve_task6:
-    ; TODO Task6
+    call function_solve_task6
     jmp done
 
     ; Free the memory allocated for the image.

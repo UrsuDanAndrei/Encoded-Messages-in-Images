@@ -2,7 +2,8 @@
 
 
 
-
+la task3 se numara de la 0
+la task4,5 se numara de la 1, dec eax!!!
 
 desi nu am reusit sa gasesc o metoda prin care sa initializez letter2morse pe ai multe randuri, codul este mai usor de urmarit si mai
 putin "hardcodat" decat daca am fi folosit un if pt fiecare caz
