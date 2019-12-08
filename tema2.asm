@@ -32,9 +32,11 @@ section .rodata
     wanted_str_size dd 7
     response_size dd 28
     
-    letter2morse db "A{.-} B{-...} C{-.-.} D{-..} E{.} F{..-.} G{--.} H{....} I{..} J{.---} K{-.-} L{.-..} M{--} N{-.} O{---} P{.--.} Q{--.-} R{.-.} S{...} T{-} U{..-} V{...-} W{.--} X{-..-} Y{-.--} Z{--..}", 0                                                                                                 
-    letter2morse_offset_begin dd 2, 8, 16, 24, 31, 36, 44, 51, 59, 65, 73, 80, 88, 94, 100, 107, 115, 123, 130, 137, 142, 149, 157, 164, 172, 180
-    letter2morse_offset_end dd 4, 12, 20, 27, 32, 40, 47, 55, 61, 69, 76, 84, 90, 96, 103, 111, 119, 126, 133, 138, 145, 153, 160, 168, 176, 184
+    letter2morse db "A{.-} B{-...} C{-.-.} D{-..} E{.} F{..-.} G{--.} H{....} I{..} J{.---} K{-.-} L{.-..} M{--} N{-.} O{---} P{.--.} Q{--.-} R{.-.} S{...} T{-} U{..-} V{...-} W{.--} X{-..-} Y{-.--} Z{--..} ,{--..--}", 0                                                                                                 
+    letter2morse_offset_begin dd 2, 8, 16, 24, 31, 36, 44, 51, 59, 65, 73, 80, 88, 94, 100, 107, 115, 123, 130, 137, 142, 149, 157, 164, 172, 180, 188
+    letter2morse_offset_end dd 4, 12, 20, 27, 32, 40, 47, 55, 61, 69, 76, 84, 90, 96, 103, 111, 119, 126, 133, 138, 145, 153, 160, 168, 176, 184, 194
+    comma_index dd 26
+    
 section .text
 
 bruteforce_singlebyte_xor:
@@ -165,57 +167,93 @@ morse_encrypt: ;(int* img, char* msg, int byte_id)
     mov ebp, esp
     
     xor ecx, ecx
-    
+
 message_iterate:
     mov eax, [ebp + 12]
     
-    ; ebx = beginning offset of the current letter for letter2morse
     xor ebx, ebx
     mov bl, BYTE[eax + ecx]
+    
+    ;NEWLINE    
+    ;PRINT_CHAR ebx
+   ; NEWLINE
+    
+    cmp ebx, ','
+    je comma_case
+    
+    ; converting letter to an index
     sub bl, 'A'
-    mov ebx, DWORD[letter2morse_offset_begin + 4 * ebx]
+    jmp begin_end_offset_initialise
     
+comma_case:
+    mov ebx, DWORD[comma_index]
+    
+begin_end_offset_initialise:
     ; saving the end offset of the current letter for letter2morse on the stack
-    push  DWORD[letter2morse_offset_end + 4 * edx]
+    push  DWORD[letter2morse_offset_end + 4 * ebx]
     
-    ; saving the index of the message on the stack
+    ; ebx = beginning offset of the current letter for letter2morse
+    mov ebx, DWORD[letter2morse_offset_begin + 4 * ebx]
+   
+    ; saving the index of the current letter on the stack
     push ecx
     xor ecx, ecx
     
     mov eax, [ebp + 8]
-    
+
 insert_encrypted_letter:
     xor edx, edx
     mov dl, BYTE[letter2morse + ebx]
+   ; PRINT_CHAR edx
     
-    ; ecx = the offset / 4 in matrix where the letter should be inserted
-    push ecx
-    push ebx
+    ; ecx = the offset / 4 in matrix where the current char should be inserted
+    mov ecx, DWORD[ebp + 16]
+    ;    PRINT_UDEC 4, ecx
+   ; PRINT_STRING " "
+   ; PRINT_CHAR edx
+   ; PRINT_STRING " "
+    ; the offset / 4 in matrix where the next char should be inserted
+    inc DWORD[ebp + 16]
     
-    mov ebx, DWORD[ebp + 16]
-    add ecx, ebx
-    
-    pop ebx
-    
+    ; insering the char
     mov DWORD[eax + 4 * ecx], edx
-    
-    ; restoring ecx
-    pop ecx
-    inc ecx
     inc ebx
     
-    ; comparing with the end offset of the current letter
+    ; comparing ebx with the end offset of the current letter
     cmp ebx, DWORD[ebp - 4]
     jne insert_encrypted_letter
+    
+    ; inserting ' ' after each letter
+    xor edx, edx
+    mov dl, ' '
+    mov ecx, DWORD[ebp + 16]
+    inc DWORD[ebp + 16]
+    mov DWORD[eax + 4 * ecx], edx
+    
+  ;  PRINT_UDEC 4, ecx
+   ; PRINT_STRING " s "
     
     ; taking the message index off the stack
     pop ecx
     inc ecx
     
+    ; clearing the stack off residual local variable
+    add esp, 4
+    
+    ; eax = the address of the message
+    mov eax, [ebp + 12]
+    
     ; if the index doesn't point at '\0' continue
-    cmp DWORD[eax + ecx], 0
+    cmp BYTE[eax + ecx], 0
     jne message_iterate
-     
+    
+    ; adding '\0' at the end of the message
+    mov ecx, DWORD[ebp + 16]
+    dec ecx
+    
+    mov eax, [ebp + 8]
+    mov DWORD[eax + 4 * ecx], 0
+    
     leave
     ret
     
@@ -406,7 +444,8 @@ solve_task3:
     push DWORD[edx + 16]
     call atoi
     add esp, 4
-    
+        
+    mov edx, [ebp + 12]
     
     ; [edx + 12] = address of the message
     push eax

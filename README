@@ -4,7 +4,8 @@
 
 
 
-
+desi nu am reusit sa gasesc o metoda prin care sa initializez letter2morse pe ai multe randuri, codul este mai usor de urmarit si mai
+putin "hardcodat" decat daca am fi folosit un if pt fiecare caz
 
 se reseteaza contorul coloanei pentru a verifica urmatoare secventa de litere
 

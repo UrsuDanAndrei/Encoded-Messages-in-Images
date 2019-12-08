@@ -1,5 +1,2 @@
-break row_iterate
-break other_key_value
-break column_iterate
-break wanted_str_iterate
+break solve_task3
 
