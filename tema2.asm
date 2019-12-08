@@ -37,6 +37,10 @@ section .rodata
     letter2morse_offset_end dd 4, 12, 20, 27, 32, 40, 47, 55, 61, 69, 76, 84, 90, 96, 103, 111, 119, 126, 133, 138, 145, 153, 160, 168, 176, 184, 194
     comma_index dd 26
     
+    mask_check dd 0x00000080
+    mask_set dd 0x00000001
+    mask_reset dd 0xfffffffe
+    
 section .text
 
 bruteforce_singlebyte_xor:
@@ -162,7 +166,7 @@ matrix_iterating:
     leave
     ret
     
-morse_encrypt: ;(int* img, char* msg, int byte_id)
+morse_encrypt:
     push ebp
     mov ebp, esp
     
@@ -173,10 +177,6 @@ message_iterate:
     
     xor ebx, ebx
     mov bl, BYTE[eax + ecx]
-    
-    ;NEWLINE    
-    ;PRINT_CHAR ebx
-   ; NEWLINE
     
     cmp ebx, ','
     je comma_case
@@ -204,14 +204,10 @@ begin_end_offset_initialise:
 insert_encrypted_letter:
     xor edx, edx
     mov dl, BYTE[letter2morse + ebx]
-   ; PRINT_CHAR edx
     
     ; ecx = the offset / 4 in matrix where the current char should be inserted
     mov ecx, DWORD[ebp + 16]
-    ;    PRINT_UDEC 4, ecx
-   ; PRINT_STRING " "
-   ; PRINT_CHAR edx
-   ; PRINT_STRING " "
+
     ; the offset / 4 in matrix where the next char should be inserted
     inc DWORD[ebp + 16]
     
@@ -229,9 +225,6 @@ insert_encrypted_letter:
     mov ecx, DWORD[ebp + 16]
     inc DWORD[ebp + 16]
     mov DWORD[eax + 4 * ecx], edx
-    
-  ;  PRINT_UDEC 4, ecx
-   ; PRINT_STRING " s "
     
     ; taking the message index off the stack
     pop ecx
@@ -257,7 +250,102 @@ insert_encrypted_letter:
     leave
     ret
     
+lsb_encode: ;void lsb_encode(int* img, char* msg, int byte_id);
+    push  ebp
+    mov ebp, esp
     
+    xor ecx, ecx
+    
+insert_letters:
+    ; edx = the current letter
+    mov eax, [ebp + 12]
+    xor edx, edx
+    mov dl, BYTE[eax + ecx]
+    
+    push ecx
+    xor ecx, ecx
+    
+    ;NEWLINE
+   ; PRINT_STRING "letter: "
+    ;PRINT_CHAR edx
+   ; NEWLINE
+    
+insert_bits:
+    ; saving bits counter
+    push ecx
+
+    ; ecx = the offset / 4 in matrix where the current bit should be inserted
+    mov ecx, DWORD[ebp + 16]
+    
+    ; the offset / 4 in matrix where the next bit should be inserted
+    inc DWORD[ebp + 16]
+    
+    ; insert 0 or 1
+    push edx
+    and edx, DWORD[mask_check]
+    
+    cmp edx, 0
+    je reset
+    
+    ;PRINT_STRING "1"
+    ; ebx = the set mask
+    mov ebx, DWORD[mask_set]
+    
+    ; inserting the bit
+    mov eax, DWORD[ebp + 8]
+    or DWORD[eax + 4 * ecx], ebx
+        
+    jmp end_insert_bits
+    
+reset:
+    ;PRINT_STRING "0"
+    ; ebx = the reset mask
+    mov ebx, DWORD[mask_reset]
+    
+    ; inserting the bit
+    mov eax, DWORD[ebp + 8]
+    and DWORD[eax + 4 * ecx], ebx
+
+end_insert_bits:
+    pop edx
+    shl edx, 1
+    
+    pop ecx
+    inc ecx
+    
+    ; if the letter (the byte) is not completely inserted, continue 
+    cmp ecx, 8
+    jne insert_bits
+        
+    ; contiue with the next letter
+    pop ecx
+    inc ecx
+    
+    mov eax, [ebp + 12]
+        
+    ; stop if '\0' is found
+    cmp BYTE[eax + ecx], 0
+    jne insert_letters
+    
+    ; insert '\0'
+    xor ecx, ecx
+    mov eax, [ebp + 8]
+    mov edx, DWORD[mask_reset]
+        
+insert_0:
+    mov ebx, DWORD[ebp + 16]
+    inc DWORD[ebp + 16]
+    
+    and DWORD[eax + 4 * ebx], edx
+    
+    inc ecx
+    
+    ; check if '\0' is completely inserted
+    cmp ecx, 8
+    jne insert_0
+    
+    leave
+    ret
 
 global main
 main:
@@ -440,7 +528,7 @@ solve_task3:
     ; getting data from arguments
     mov edx, [ebp + 12]
     
-    ; eax = offset / 4
+    ; eax = offset / 4 where the encrypted message should be written
     push DWORD[edx + 16]
     call atoi
     add esp, 4
@@ -464,7 +552,30 @@ solve_task3:
     jmp done
     
 solve_task4:
-    ; TODO Task4
+    ; getting data from arguments
+    mov edx, [ebp + 12]
+    
+    ; eax = offset / 4 where the encoded message should be written
+    push DWORD[edx + 16]
+    call atoi
+    add esp, 4
+        
+    mov edx, [ebp + 12]
+    dec eax
+    ; [edx + 12] = address of the message
+    push eax
+    push DWORD[edx + 12]
+    push DWORD[img]
+    call lsb_encode
+    add esp, 12
+    
+    ; printing image
+    push DWORD[img_height]
+    push DWORD[img_width]
+    push DWORD[img]
+    call print_image
+    add esp, 12
+    
     jmp done
 solve_task5:
     ; TODO Task5
