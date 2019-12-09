@@ -1,13 +1,212 @@
+Nume: Ursu Dan-Andrei
+Grupa: 324CA
+
+==================================== TASK 1 ====================================
+
+(523) function_solve_task1:
+
+(524-547):
+Se apeleaza functia bruteforce_singlebyte_xor, care returneaza prin
+registrul eax valoarea cheii de criptare gasite prin bruteforce si indicele 
+randului unde se afla cuvantul "revient".
+
+eax = 12/34/56/78, in byte-ul 78 se gaseste cheia, iar in 12/34/56 se gaseste
+indicele randului.
+
+(549-565):
+Se calculeaza offset-ul pentru inceputul mesajului si se salveaza in ecx. Se
+printeaza mesajul pana la intalnirea terminatorului de sir sau pana la finalul
+randului.
+
+(567-579):
+Se printeaza cheia gasita si indicele randului pe care a fost descoperit mesajul
+ce contine cuvantul revient.
+
+
+bruteforce_singlebyte_xor:
+Executa bruteforce pentru a gasi cheia folosita la criptarea mesajului ce
+contine cuvantul revient.
+
+(53-59):
+Se incearca toate valorile ce incap pe un byte pentru cheie
+
+(60-79):
+Se itereaza prin matrice (salvandu-se pe stiva indicele pentru fiecare bucla)
+pentru a se gasi adresa de inceput a cuvantului revient.
+
+(80-104):
+Se face xor intre pixelii curenti si cheia curenta si se compara rezultatele cu 
+literele cuvantului cautat. Daca vreo litera nu corespunde se va continua
+iterarea prin matrice. Daca toate literele corespund se va face "jump" la
+label-ul found.
+
+(134) found:
+Se introduce in byte-ul 78 al registrului eax valoarea cheii si in 12/34/56 se
+introduce indicele randului.
+
+==================================== TASK 2 ====================================
+
+(581) function solve_task2:
+
+(524-600):
+Se apeleaza functia bruteforce_singlebyte_xor, care returneaza prin
+registrul eax valoarea cheii de criptare gasite prin bruteforce si indicele 
+randului unde se afla cuvantul "revient". Utilizand cheia gasita se decripteaza
+matricea, utilizand functia xor_with_key.
+
+(613-621):
+Se insereaza raspunsul byte cu byte pe linia de sub randul pe care a fost gasit
+mesajul de la task-ul 1.
+
+(623-631):
+Se calculeaza noua cheie de criptare.
+
+(633-637):
+Se cripteaza matricea cu noua cheie prin apelul functiei xor_with_key.
+
+(639-644):
+Se afiseaza imaginea
+
+
+(149) xor_with_key:
+Primeste adresa unei matrici si o cheie ca parametrii. Interpretand matricea ca
+pe un vector (o zona continua de memorie), face xor intre elementele acesteia
+si cheia primita.
+
+==================================== TASK 3 ====================================
+
+(649) function_solve_task3:
+
+(650-668):
+Se extrage adresa mesajului care trebuie "morse criptat" si offset-ul de la care
+trebuie introdus in matrice cu ajutorul functiei atoi. Impreuna cu adresa
+matricei se trimit aceste informatii ca parametrii functiei morse_ecrypt.
+
+(670-678):
+Se afiseaza imaginea
+
+(170) morse_encrypt:
+Primeste ca parametrii adresa unei imagini, un mesaj si un offset. Introduce
+mesajul "morse criptat" in matrice de la offset-ul primit.
+
+(176-221):
+Se itereaza prin mesaj si se verifica daca caracterul curent este o litera sau
+',', urmand sa se introduca codificarea morse a acestuia in matrice. ',' este 
+tratata deosebit, pentru ea utilizandu-se constanta comma_index in loc de 
+(litera - 'A', vezi mai jos).
+
+Vector-ul letter2morse este declarat in .rodata si contine codificarile morse
+ale tuturor literelor din alfabetul englez + codificarea caracterului ',' la
+final.
+
+Pentru a accesa aceste codificari se utilizeaza vectorii 
+letter2morse_offset_begin si letter2morse_offset_end, care, dupa cum le spune si
+numele, retin offset-ul din letter2morse pentru fiecare litera.
+
+Pentru a determina codificare morse pentru o litera se scade din valoarea ei 
+litera 'A', obtinandu-se astfel indexul pentru vectorii 
+letter2morse_offset_begin si letter2morse_offset_end. Se va insera in matrice 
+subsecventa [letter2morse_offset_begin, letter2morse_offset_end) din vectorul
+letter2morse, ce corespunde codificarii morse a literii respective.
+
+(Din pacate nu am stiut cum sa declar vectorii astfel incat sa respect
+conventiile de coding style, luam eroare de compilare daca incercam sa ii scriu
+pe mai multe linii).
+
+(224-228):
+Dupa fiecare caracter se insereaza cate un spatiu.
+
+(244-250):
+Dupa ce s-au inserat toate caracterele din mesaj se insereaza si '\0'.
+
+==================================== TASK 4 ====================================
+
+(680) function_solve_task4:
+Se extrage adresa mesajului care trebuie "lsb encodat" si offset-ul de la care
+trebuie introdus in matrice cu ajutorul functiei atoi. Impreuna cu adresa
+matricei se trimit aceste informatii ca parametrii functiei lsb_encode.
+
+(702-707):
+Se afiseaza imaginea
+
+(254) lsb_encode:
+Primeste ca parametrii adresa unei imagini, un mesaj si un offset. Introduce
+mesajul "lsb encodat" in matrice de la offset-ul primit.
+
+(260-267):
+Se itereaza prin mesaj si se introduce litera curenta in imagine bit cu bit.
+
+(269) insert_bit:
+
+(270-277):
+Se salveaza in ecx offset-ul unde trebuie introdus bitul curent si se
+incrementeaza acest offset pentru ca urmatorul bit sa nu fie introdus la aceeasi
+adresa.
+
+(279-300):
+Se verifica daca bitul ce trebuie introdus este 0 sau 1 cu ajutorul mask_check,
+se alege masca (mask_set || mask_reset) si se face operatia (or || and)
+corespunzatoare pentru fiecare caz.
+
+Se "shifteaza" la stanga litera curenta pentru a se putea accesa urmatorul bit
+si se repeta procedura (numai daca nu s-au procesta toti cei 8 biti ai ei, caz
+in care se trece la litera urmatoare).
+
+(329-340):
+Se insereaza terminatorul de sir (8 biti de 0).
+
+==================================== TASK 5 ====================================
+
+(712) function_solve_task5:
+Se extrage offset-ul de la care trebuie decodat measjul cautat in matrice cu
+ajutorul functiei atoi. Impreuna cu adresa matricei se trimit aceste informatii
+ca parametrii functiei lsb_decode.
 
 
 
+(344) lsb_decode:
+Primeste ca parametrii adresa unei imagini si un offset. Afiseaza mesajul 
+"lsb decodat" din matrice care se gaseste la offset-ul primit.
 
-la task3 se numara de la 0
-la task4,5 se numara de la 1, dec eax!!!
+(355-363):
+Se salveaza in ecx offset-ul pentru pixelul din care se va extrage bit-ul curent
+si se incrementeaza acest offset pentru ca urmatorul bit sa nu fie extras de la
+acceeasi adresa.
 
-desi nu am reusit sa gasesc o metoda prin care sa initializez letter2morse pe ai multe randuri, codul este mai usor de urmarit si mai
-putin "hardcodat" decat daca am fi folosit un if pt fiecare caz
+(365-391):
+Se extrage (cu ajutorul mastii mask_get_last_bit), bit-ul din matrice si se
+introduce in litera curenta. Se verifica daca litera este completa (contine 8
+biti), caz in care se afiseaza si se trece la formarea urmatoarei litere (doar
+daca nu s-a intalnit '\0').
 
-se reseteaza contorul coloanei pentru a verifica urmatoare secventa de litere
+==================================== TASK 6 ====================================
 
-Daca era nevoie se puteau coda si numerele in aceeasi maniera in num2morse
+(733) function_solve_task6:
+Se printeaza header-ul imaginii si se timite imaginea ca parametru functiei
+blur.
+
+(396) blur:
+Primeste ca parametru adresa unei imagini si o afiseaza cu filtrul "blur"
+aplicat asupra ei.
+
+(418-496):
+Se aplica efectul pentru fiecare rand
+
+(400-416):
+Se afiseaza primul rand al matricei (acesta ramane neschimbat).
+
+(420-431):
+Se afiseaza primul pixel din fiecare rand (aceste elemente raman neschimbate).
+
+(437-482):
+Se itereaza prin randul curent si in locul fiecarui pixel se afiseaza media
+aritmetica a valorilor pixelilor: cel curent, cel de deasupra, cel de dedesubt,
+cel din stanga, cel din dreapta. Obtinandu-se astfel efectul de blur.
+
+(485-488):
+Se afiseaza ultimul pixel din fiecare rand (aceste elemente raman neschimbate).
+
+(507-519):
+Se afiseaza ultimul rand al matricei (acesta ramane neschimbat).
+
+================================================================================

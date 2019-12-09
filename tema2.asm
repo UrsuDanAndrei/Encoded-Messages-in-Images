@@ -392,26 +392,11 @@ end_lsb_decode:
     
     leave
     ret
-    
+
 blur:
     push ebp
     mov ebp, esp
-    
-  ;  push DWORD[img]
-   ; call print_image
-   ;z add esp, 4
-    ; printing header of the image
-  ;  NEWLINE
-    ;call print_image
-   ; mov ebp, esp
-  ;  NEWLINE
- ;   PRINT_STRING "ssssssssss"
-  ;;   PRINT_UDEC 4, ebp
- ;;    NEWLINE
- ;    NEWLINE
-   ;  NEWLINE
-    
-  ;  jmp end_f
+
     mov eax, [ebp + 8]
     xor ecx, ecx
     
@@ -450,44 +435,30 @@ blur_row:
     add ebx, 2
         
 blur_column:
-   ; NEWLINE
-    ;PRINT_STRING "------"
-    ;NEWLINE
     ; saving column number and offset
     push ecx
     push ebx
     
-    ;PRINT_UDEC 4, ecx
-    ;NEWLINE
     ; current pixel
     mov edx, DWORD[eax + 4 * (ebx - 1)]
-    ;PRINT_UDEC 4, ebx
-    ;NEWLINE
+    
     ; pixel above
     sub ebx, DWORD[img_width]
-    ;PRINT_UDEC 4, ebx
-    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
     ; pixel below
     mov ebx, DWORD[esp]
     add ebx, DWORD[img_width]
-    ;PRINT_UDEC 4, ebx
-    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
     ; pixel left
     mov ebx, DWORD[esp]
     dec ebx
-    ;PRINT_UDEC 4, ebx
-    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
     ; pixel right
     mov ebx, DWORD[esp]
     inc ebx
-    ;PRINT_UDEC 4, ebx
-    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
      ; edx = pixel average
@@ -566,7 +537,7 @@ function_solve_task1:
     shr eax, 8
     push eax
     
-    ; calculating the offset / 4 and storing it in ecx
+    ; ecx = offset / 4 for the start of the message
     push edx
     mul DWORD[img_width]
     mov ecx, eax
@@ -763,8 +734,10 @@ function_solve_task6:
     push ebp
     mov ebp, esp
     
+    ; printing image header
     call print_image
     
+    ; printing blured image
     push DWORD[img]
     call blur
     add esp, 4
