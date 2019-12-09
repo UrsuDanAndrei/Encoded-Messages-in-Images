@@ -397,7 +397,37 @@ blur:
     push ebp
     mov ebp, esp
     
-    ; skipping first and last row
+  ;  push DWORD[img]
+   ; call print_image
+   ;z add esp, 4
+    ; printing header of the image
+  ;  NEWLINE
+    ;call print_image
+   ; mov ebp, esp
+  ;  NEWLINE
+ ;   PRINT_STRING "ssssssssss"
+  ;;   PRINT_UDEC 4, ebp
+ ;;    NEWLINE
+ ;    NEWLINE
+   ;  NEWLINE
+    
+  ;  jmp end_f
+    mov eax, [ebp + 8]
+    xor ecx, ecx
+    
+print_first_row:
+    mov edx, [eax + 4 * ecx]
+    PRINT_UDEC 4, edx
+    PRINT_STRING " "
+    
+    inc ecx
+    
+    cmp ecx, DWORD[img_width]
+    jne print_first_row
+    
+    NEWLINE
+    
+    ; first and last rows are printed separately
     mov ecx, 2
     
 blur_row:
@@ -410,65 +440,70 @@ blur_row:
     mul DWORD[img_width]
     mov ebx, eax
     
+    ; printing first elemnet in current row
     mov eax, [ebp + 8]
+    PRINT_UDEC 4, [eax + 4 * ebx]
+    PRINT_STRING " "
     
-    ; first and last element of each column are skipped
+    ; first and last element of each row are printed separately
     mov ecx, 2
     add ebx, 2
         
 blur_column:
-    NEWLINE
-    PRINT_STRING "------"
-    NEWLINE
+   ; NEWLINE
+    ;PRINT_STRING "------"
+    ;NEWLINE
     ; saving column number and offset
-    push ebx
     push ecx
+    push ebx
     
     ;PRINT_UDEC 4, ecx
     ;NEWLINE
     ; current pixel
     mov edx, DWORD[eax + 4 * (ebx - 1)]
-    PRINT_UDEC 4, ebx
-    NEWLINE
+    ;PRINT_UDEC 4, ebx
+    ;NEWLINE
     ; pixel above
     sub ebx, DWORD[img_width]
-    PRINT_UDEC 4, ebx
-    NEWLINE
+    ;PRINT_UDEC 4, ebx
+    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
     ; pixel below
-    mov ebx, [ebp - 8]
+    mov ebx, DWORD[esp]
     add ebx, DWORD[img_width]
-    PRINT_UDEC 4, ebx
-    NEWLINE
+    ;PRINT_UDEC 4, ebx
+    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
     ; pixel left
-    mov ebx, [ebp - 8]
+    mov ebx, DWORD[esp]
     dec ebx
-    PRINT_UDEC 4, ebx
-    NEWLINE
-    add ebx, DWORD[eax + 4 * (ebx - 1)]
-    
-    ; pixel right
-    mov ebx, [ebp - 8]
-    inc ebx
-    PRINT_UDEC 4, ebx
-    NEWLINE
+    ;PRINT_UDEC 4, ebx
+    ;NEWLINE
     add edx, DWORD[eax + 4 * (ebx - 1)]
     
-    ; edx = pixel average
-    mov eax, edx
-    xor edx, edx
-    mov ebx, 5
-    div ebx
-    mov edx, eax
+    ; pixel right
+    mov ebx, DWORD[esp]
+    inc ebx
+    ;PRINT_UDEC 4, ebx
+    ;NEWLINE
+    add edx, DWORD[eax + 4 * (ebx - 1)]
     
-    ; bluring the current pixel
-    pop ecx
-    pop ebx
+     ; edx = pixel average
+     mov eax, edx
+     xor edx, edx
+     mov ebx, 5
+     div ebx
+     mov edx, eax
+        
+    ; printing blured pixel
     mov eax, DWORD[ebp + 8]
-    mov DWORD[eax + 4 * (ebx - 1)], edx
+    PRINT_UDEC 4, edx
+    PRINT_STRING " "
+    
+    pop ebx
+    pop ecx
     
     inc ecx
     inc ebx
@@ -476,11 +511,40 @@ blur_column:
     cmp ecx, DWORD[img_width]
     jne blur_column
     
+    ; printing last element of current row
+    mov edx, DWORD[eax + 4 * (ebx - 1)]
+    PRINT_UDEC 4, edx
+    PRINT_STRING " "
+    
+    NEWLINE
+    
     pop ecx
     inc ecx
     
     cmp ecx, DWORD[img_height]
     jne blur_row
+
+    ; ebx = offset / 4 for the first element in the last row
+    mov eax, DWORD[img_height]
+    dec eax
+    mul DWORD[img_width]
+    mov ebx, eax
+    
+    mov eax, [ebp + 8]
+    xor ecx, ecx
+    
+print_last_row:
+    mov edx, [eax + 4 * ebx]
+    PRINT_UDEC 4, edx
+    PRINT_STRING " "
+    
+    inc ebx
+    inc ecx
+    
+    cmp ecx, DWORD[img_width]
+    jne print_last_row
+    
+    NEWLINE
     
     leave
     ret
@@ -699,16 +763,11 @@ function_solve_task6:
     push ebp
     mov ebp, esp
     
+    call print_image
+    
     push DWORD[img]
     call blur
     add esp, 4
-    
-    ; printing image
-    push DWORD[img_height]
-    push DWORD[img_width]
-    push DWORD[img]
-    call print_image
-    add esp, 12
     
     leave
     ret
